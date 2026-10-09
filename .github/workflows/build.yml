@@ -83,7 +83,7 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Path "${{github.workspace}}/package" -Force
-        Copy-Item "${{github.workspace}}/build/shadPS4.exe" -Destination "${{github.workspace}}/package/"
+        Get-ChildItem -Path "${{github.workspace}}/build" -Filter "shadps4*.exe" -Recurse | Select-Object -First 1 | Copy-Item -Destination "${{github.workspace}}/package/shadPS4.exe"
         Compress-Archive -Path "${{github.workspace}}/package/*" -DestinationPath "${{github.workspace}}/shadps4-win64-sdl-${{ needs.get-info.outputs.date }}-${{ needs.get-info.outputs.shorthash }}.zip"
 
     - name: Upload Windows SDL artifact
@@ -113,8 +113,10 @@ jobs:
         prerelease: false
         generate_release_notes: false
         body: |
-          ### Shadow of the Colossus Optimized Build
+          ### Shadow of the Colossus Fixes & Performance Build
           - **Commit**: [${{ needs.get-info.outputs.fullhash }}](https://github.com/${{ github.repository }}/commit/${{ needs.get-info.outputs.fullhash }})
           - **Date**: ${{ needs.get-info.outputs.date }}
-          - Built automatically with fast Windows runner pipeline.
+          - BC5 texture format fallback (resolves green normal map tint on AMD)
+          - Capped unbounded buffer allocations (resolves VRAM exhaustion, 2s periodic stutter, and ErrorOutOfDeviceMemory crash)
         files: ./artifacts/*.zip
+

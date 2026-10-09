@@ -104,7 +104,7 @@ void UniqueImage::Create(const vk::ImageCreateInfo& image_ci) {
     this->image_ci = image_ci;
     ASSERT(!image);
     const VmaAllocationCreateInfo alloc_ci = {
-        .flags = VMA_ALLOCATION_CREATE_WITHIN_BUDGET_BIT,
+        .flags = 0,
         .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         .requiredFlags = 0,
         .preferredFlags = 0,
@@ -161,8 +161,20 @@ Image::Image(const Vulkan::Instance& instance, Vulkan::Runtime& runtime_,
         .usage = usage_flags,
         .flags = flags,
     };
-    const auto image_format_properties =
+    auto image_format_properties =
         instance.GetPhysicalDevice().getImageFormatProperties2(format_info);
+    if (image_format_properties.result == vk::Result::eErrorFormatNotSupported &&
+        (usage_flags & vk::ImageUsageFlagBits::eStorage)) {
+        auto fallback_info = format_info;
+        fallback_info.usage &= ~vk::ImageUsageFlagBits::eStorage;
+        auto fallback_properties =
+            instance.GetPhysicalDevice().getImageFormatProperties2(fallback_info);
+        if (fallback_properties.result == vk::Result::eSuccess) {
+            usage_flags &= ~vk::ImageUsageFlagBits::eStorage;
+            format_features = FormatFeatureFlags(usage_flags);
+            image_format_properties = fallback_properties;
+        }
+    }
     if (image_format_properties.result == vk::Result::eErrorFormatNotSupported) {
         LOG_ERROR(Render_Vulkan, "image format {} type {} is not supported (flags {}, usage {})",
                   vk::to_string(supported_format), vk::to_string(format_info.type),
