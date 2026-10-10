@@ -15,6 +15,7 @@
 #endif
 
 void assert_fail_impl() {
+    Common::Log::Flush();
     Core::Signals::Instance()->RemoveHandlers();
     Common::Singleton<Core::Emulator>::Instance()->Shutdown();
     Crash();

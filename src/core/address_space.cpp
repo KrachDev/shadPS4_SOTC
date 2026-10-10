@@ -60,8 +60,9 @@ static constexpr u64 SystemManagedSize = SYSTEM_MANAGED_MAX - SYSTEM_MANAGED_MIN
 static constexpr u64 SystemReservedSize = SYSTEM_RESERVED_MAX - SYSTEM_RESERVED_MIN + 1;
 static constexpr u64 UserSize = USER_MAX - USER_MIN + 1;
 
-// Required backing file size for mapping physical address space.
-static u64 BackingSize = ORBIS_KERNEL_TOTAL_MEM_DEV_PRO + ORBIS_KERNEL_FLEXIBLE_MEMORY_SIZE;
+// Required default backing file size for mapping physical address space.
+static constexpr u64 DefaultBackingSize =
+    ORBIS_KERNEL_TOTAL_MEM_DEV_PRO + ORBIS_KERNEL_FLEXIBLE_MEMORY_SIZE;
 
 #ifdef _WIN32
 
@@ -192,9 +193,10 @@ struct AddressSpace::Impl {
         user_base = reinterpret_cast<u8*>(USER_MIN);
         user_size = supported_user_max - USER_MIN - 1;
 
-        // Increase BackingSize to account for config options.
-        BackingSize += EmulatorSettings.GetExtraDmemInMBytes() * 1_MB +
-                       EmulatorSettings.GetExtraFmemInMBytes() * 1_MB;
+        // Determine BackingSize to account for config options.
+        const u64 BackingSize = DefaultBackingSize +
+                                EmulatorSettings.GetExtraDmemInMBytes() * 1_MB +
+                                EmulatorSettings.GetExtraFmemInMBytes() * 1_MB;
 
         // Allocate backing file that represents the total physical memory.
         backing_handle = CreateFileMapping2(INVALID_HANDLE_VALUE, nullptr, FILE_MAP_ALL_ACCESS,
@@ -671,8 +673,9 @@ enum PosixPageProtection {
 
 struct AddressSpace::Impl {
     Impl() {
-        BackingSize += EmulatorSettings.GetExtraDmemInMBytes() * 1_MB +
-                       EmulatorSettings.GetExtraFmemInMBytes() * 1_MB;
+        const u64 BackingSize = DefaultBackingSize +
+                                EmulatorSettings.GetExtraDmemInMBytes() * 1_MB +
+                                EmulatorSettings.GetExtraFmemInMBytes() * 1_MB;
         // Allocate virtual address placeholder for our address space.
         system_managed_size = SystemManagedSize;
         system_reserved_size = SystemReservedSize;

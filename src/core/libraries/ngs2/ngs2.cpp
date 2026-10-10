@@ -333,11 +333,17 @@ s32 PS4_SYSV_ABI sceNgs2VoiceGetPortInfo(OrbisNgs2Handle voiceHandle, u32 port,
 
 s32 PS4_SYSV_ABI sceNgs2VoiceGetState(OrbisNgs2Handle voiceHandle, OrbisNgs2VoiceState* outState,
                                       size_t stateSize) {
+    if (outState && stateSize) {
+        std::memset(outState, 0, stateSize);
+    }
     LOG_ERROR(Lib_Ngs2, "stateSize = {}", stateSize);
     return ORBIS_OK;
 }
 
 s32 PS4_SYSV_ABI sceNgs2VoiceGetStateFlags(OrbisNgs2Handle voiceHandle, u32* outStateFlags) {
+    if (outStateFlags) {
+        *outStateFlags = 0;
+    }
     LOG_ERROR(Lib_Ngs2, "called");
     return ORBIS_OK;
 }
