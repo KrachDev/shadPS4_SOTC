@@ -23,6 +23,10 @@
 #include "shader_recompiler/ir/srt_gvn_table.h"
 #include "shader_recompiler/ir/value.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 #ifdef ARCH_X86_64
 
 using namespace Xbyak::util;
@@ -101,6 +105,13 @@ static bool SrtWalkerSignalHandler(void* context, void* fault_address) {
 
     // Fill nops
     memset(code_patch + patch_size, 0x90, len - patch_size);
+
+#ifdef _WIN32
+    FlushInstructionCache(GetCurrentProcess(), code_patch, len);
+#else
+    __builtin___clear_cache(reinterpret_cast<char*>(code_patch),
+                            reinterpret_cast<char*>(code_patch + len));
+#endif
 
     LOG_WARNING(Render_Recompiler, "Patched SRT walker at {}, fault address {}", code,
                 fault_address);

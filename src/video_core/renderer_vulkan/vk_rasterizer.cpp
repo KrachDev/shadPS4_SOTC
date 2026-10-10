@@ -474,7 +474,8 @@ void Rasterizer::BindVertexBuffers(const GraphicsPipeline* pipeline) {
     // Build list of ranges covering the requested buffers
     VertexInputs<BufferRange> ranges{};
     for (const auto& buffer : guest_buffers) {
-        if (buffer.base_address != 0 && buffer.GetSize() > 0) {
+        if (buffer.base_address != 0 && buffer.GetSize() > 0 &&
+            memory->IsValidGpuMapping(buffer.base_address, 0)) {
             ranges.emplace_back(buffer.base_address, buffer.base_address + buffer.GetSize());
         }
     }
@@ -516,7 +517,8 @@ void Rasterizer::BindVertexBuffers(const GraphicsPipeline* pipeline) {
     VertexInputs<vk::DeviceSize> host_sizes;
     VertexInputs<vk::DeviceSize> host_strides;
     for (const auto& buffer : guest_buffers) {
-        if (buffer.base_address != 0 && buffer.GetSize() > 0) {
+        if (buffer.base_address != 0 && buffer.GetSize() > 0 &&
+            memory->IsValidGpuMapping(buffer.base_address, 0)) {
             const auto host_buffer_info =
                 std::ranges::find_if(ranges_merged, [&](const BufferRange& range) {
                     return buffer.base_address >= range.base_address &&
@@ -558,7 +560,9 @@ void Rasterizer::BindIndexBuffer(u32 index_offset, bool is_indirect) {
     const u32 num_indices =
         is_indirect ? regs.max_index_size : std::min(regs.num_indices, regs.max_index_size);
     const u64 requested_size = u64(num_indices) * index_size;
-    const u64 mapped_size = memory->ClampRangeSize(index_address, requested_size);
+    const u64 mapped_size = (index_address != 0 && memory->IsValidMapping(index_address, 0))
+                                ? memory->ClampRangeSize(index_address, requested_size)
+                                : 0;
     u32 index_buffer_size = static_cast<u32>(Common::AlignDown(mapped_size, index_size));
     vk::Buffer index_buffer{};
     u64 buffer_offset{};
@@ -815,7 +819,8 @@ void Rasterizer::BindBuffers(const Shader::Info& stage, Shader::Backend::Binding
             }
         } else {
             const auto vsharp = desc.GetSharp(stage);
-            if (vsharp.base_address == 0 || vsharp.GetSize() == 0) {
+            if (vsharp.base_address == 0 || vsharp.GetSize() == 0 ||
+                !memory->IsValidGpuMapping(vsharp.base_address, 0)) {
                 buffer_infos.emplace_back(VK_NULL_HANDLE, 0, VK_WHOLE_SIZE);
             } else {
                 static constexpr u64 MaxUnboundedBufferSize = 64_MB;
