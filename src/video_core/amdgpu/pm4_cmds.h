@@ -1230,9 +1230,8 @@ struct PM4CmdCondExec {
                                          ///< if bool pointed to is zero
     };
 
-    bool* Address() const {
-        return std::bit_cast<bool*>(u64(bool_addr_hi.Value()) << 32 | u64(bool_addr_lo.Value())
-                                                                          << 2);
+    VAddr Address() const {
+        return u64(bool_addr_hi.Value()) << 32 | u64(bool_addr_lo.Value()) << 2;
     }
 };
 
